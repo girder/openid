@@ -21,7 +21,6 @@ import cherrypy
 import re
 import ssl
 from openid.consumer import consumer
-from openid.store import memstore
 from openid.extensions import ax
 
 from girder import config
@@ -29,7 +28,7 @@ from girder.api.describe import Description, autoDescribeRoute
 from girder.api.rest import getApiUrl, setResponseHeader, rawResponse, Resource, RestException
 from girder.api import access
 from girder.constants import SettingKey
-from . import constants
+from . import constants, store
 
 _REQUIRED_AX_ATTRS = {
     'EMAIL': 'http://axschema.org/contact/email',
@@ -62,7 +61,7 @@ class OpenId(Resource):
         self.route('GET', ('login',), self.login)
         self.route('GET', ('callback',), self.callback)
 
-        self._store = memstore.MemoryStore()  # TODO implement store
+        self._store = store.GirderStore()
         ssl._create_default_https_context = ssl._create_unverified_context  # TODO remove awful monkey patch that circumvents SSL cert verification
 
     @access.public
