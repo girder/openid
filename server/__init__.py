@@ -36,6 +36,12 @@ def validateProvidersEnabled(doc):
             raise ValidationException('Providers must have a "name" and "url" field.')
 
 
+@setting_utilities.validator(constants.PluginSettings.IGNORE_REGISTRATION_POLICY)
+def validateIgnoreRegistrationPolicy(doc):
+    if not isinstance(doc['value'], bool):
+        raise ValidationException('Ignore registration policy setting must be boolean.', 'value')
+
+
 def checkOpenIdUser(event):
     """
     If an OpenID user without a password tries to log in with a password, we

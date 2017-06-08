@@ -146,8 +146,11 @@ class OpenId(Resource):
 
         # Create the user if it's still not found
         if not user:
-            policy = self.model('setting').get(SettingKey.REGISTRATION_POLICY)
-            if policy == 'closed':
+            settings = self.model('setting')
+            ignore = constants.PluginSettings.IGNORE_REGISTRATION_POLICY
+            policy = SettingKey.REGISTRATION_POLICY
+
+            if not settings.get(ignore) and settings.get(policy) == 'closed':
                 raise RestException(
                     'Registration on this instance is closed. Contact an '
                     'administrator to create an account for you.')
