@@ -65,7 +65,7 @@ class OpenId(Resource):
         self._store = store.GirderStore()
         ssl._create_default_https_context = ssl._create_unverified_context  # TODO remove awful monkey patch that circumvents SSL cert verification
 
-    @access.public
+    @access.unauthenticated
     @rawResponse
     @autoDescribeRoute(
         Description('Get the XRDS document for this OpenID RP.')
@@ -75,14 +75,14 @@ class OpenId(Resource):
         setResponseHeader('X-XRDS-Location', apiUrl + '/openid')
         return _xrdsDoc.format(returnTo=apiUrl + '/openid/callback')
 
-    @access.public
+    @access.unauthenticated
     @autoDescribeRoute(
         Description('Get the list of enabled OpenId providers and their URLs.')
     )
     def listProviders(self, params):
        return Setting().get(constants.PluginSettings.PROVIDERS)
 
-    @access.public
+    @access.unauthenticated
     @autoDescribeRoute(
         Description('Login using a specific OpenID provider URL.')
         .param('url', 'The OpenID provider URL to use for authentication.')
@@ -97,7 +97,7 @@ class OpenId(Resource):
         raise cherrypy.HTTPRedirect(
             request.redirectURL(apiUrl + '/openid', apiUrl + '/openid/callback'))
 
-    @access.public
+    @access.unauthenticated
     @autoDescribeRoute(
         Description('Callback called by OpenID providers.'),
         hide=True
