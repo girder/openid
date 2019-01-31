@@ -28,6 +28,7 @@ from girder.api.describe import Description, autoDescribeRoute
 from girder.api.rest import getApiUrl, setResponseHeader, rawResponse, Resource, RestException
 from girder.api import access
 from girder.constants import SettingKey
+from girder.models.setting import Setting
 from . import constants, store
 
 _REQUIRED_AX_ATTRS = {
@@ -79,7 +80,7 @@ class OpenId(Resource):
         Description('Get the list of enabled OpenId providers and their URLs.')
     )
     def listProviders(self, params):
-       return self.model('setting').get(constants.PluginSettings.PROVIDERS)
+       return Setting().get(constants.PluginSettings.PROVIDERS)
 
     @access.public
     @autoDescribeRoute(
@@ -87,6 +88,9 @@ class OpenId(Resource):
         .param('url', 'The OpenID provider URL to use for authentication.')
     )
     def login(self, url, params):
+        if url not in set(p['url'] for p in Setting().get(constants.PluginSettings.PROVIDERS)):
+            raise RestException('Invalid OpenID provider URL.')
+
         request = consumer.Consumer(session={}, store=self._store).begin(url)
         request.addExtension(self._getAxFetchRequest())
         apiUrl = getApiUrl()
@@ -146,11 +150,10 @@ class OpenId(Resource):
 
         # Create the user if it's still not found
         if not user:
-            settings = self.model('setting')
             ignore = constants.PluginSettings.IGNORE_REGISTRATION_POLICY
             policy = SettingKey.REGISTRATION_POLICY
 
-            if not settings.get(ignore) and settings.get(policy) == 'closed':
+            if not Setting().get(ignore) and Setting().get(policy) == 'closed':
                 raise RestException(
                     'Registration on this instance is closed. Contact an '
                     'administrator to create an account for you.')

@@ -4,6 +4,7 @@ from girder.utility.model_importer import ModelImporter
 from openid import association, oidutil
 from openid.store import interface, nonce
 
+
 class GirderStore(interface.OpenIDStore, ModelImporter):
     """
     Stores persistent OpenID data using Girder's persistence
