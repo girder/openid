@@ -1,17 +1,18 @@
 import datetime
 import time
-from girder.utility.model_importer import ModelImporter
 from openid import association, oidutil
 from openid.store import interface, nonce
 
+from .models import Association, Nonce
 
-class GirderStore(interface.OpenIDStore, ModelImporter):
+
+class GirderStore(interface.OpenIDStore):
     """
     Stores persistent OpenID data using Girder's persistence
     layer, namely the association and nonce models in this plugin.
     """
     def storeAssociation(self, server_url, association):
-        self.model('association', 'openid').save({
+        Association().save({
             'url': server_url,
             'handle': association.handle,
             'secret': oidutil.toBase64(association.secret),
@@ -34,7 +35,7 @@ class GirderStore(interface.OpenIDStore, ModelImporter):
         if handle is not None:
             q['handle'] = handle
 
-        assocs = [self._mkAssoc(d) for d in self.model('association', 'openid').find(q)]
+        assocs = [self._mkAssoc(d) for d in Association().find(q)]
         if not assocs:
             return None
         if handle is not None:
@@ -46,24 +47,22 @@ class GirderStore(interface.OpenIDStore, ModelImporter):
         return min(assocs, key=_key)
 
     def removeAssociation(self, server_url, handle):
-        model = self.model('association', 'openid')
-        assoc = model.findOne({
+        assoc = Association().findOne({
             'url': server_url,
             'handle': handle
         })
-        if assoc:
-            model.remove(assoc)
+        if assoc is not None:
+            Association().remove(assoc)
 
     def useNonce(self, server_url, timestamp, salt):
         if abs(timestamp - time.time()) > nonce.SKEW:
             return False
 
-        model = self.model('nonce', 'openid')
         n = ''.join((server_url, str(timestamp), salt))
-        if model.findOne({'_id': n}):
+        if Nonce().findOne({'_id': n}):
             return False
 
-        model.save({
+        Nonce().save({
             '_id': n,
             'expires': datetime.datetime.utcnow() + datetime.timedelta(hours=3)
         })

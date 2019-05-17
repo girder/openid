@@ -1,25 +1,6 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-###############################################################################
-#  Copyright Kitware Inc.
-#
-#  Licensed under the Apache License, Version 2.0 ( the "License" );
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-###############################################################################
-
-from girder import events
-from girder.constants import SettingDefault
+from girder import events, plugin
 from girder.models.model_base import ValidationException
+from girder.settings import SettingDefault
 from girder.utility import setting_utilities
 from . import rest, constants
 
@@ -42,21 +23,22 @@ def validateIgnoreRegistrationPolicy(doc):
         raise ValidationException('Ignore registration policy setting must be boolean.', 'value')
 
 
-def checkOpenIdUser(event):
+def _checkOpenIdUser(event):
     """
     If an OpenID user without a password tries to log in with a password, we
     want to give them a useful error message.
     """
-    user = event.info['user']
-    if user.get('openid'):
+    if event.info['user'].get('openid'):
         raise ValidationException(
             'You don\'t have a password. Please log in with OpenID, or use the '
             'password reset link.')
 
 
-def load(info):
-    events.bind('no_password_login_attempt', 'openid', checkOpenIdUser)
+class GirderPlugin(plugin.GirderPlugin):
+    DISPLAY_NAME = 'OpenID 1.0 Login'
+    CLIENT_SOURCE_PATH = 'web_client'
 
-    info['apiRoot'].openid = rest.OpenId()
-
-    SettingDefault.defaults[constants.PluginSettings.PROVIDERS] = []
+    def load(self, info):
+        events.bind('no_password_login_attempt', 'openid', _checkOpenIdUser)
+        info['apiRoot'].openid = rest.OpenId()
+        SettingDefault.defaults[constants.PluginSettings.PROVIDERS] = []

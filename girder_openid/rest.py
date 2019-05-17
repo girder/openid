@@ -1,22 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-###############################################################################
-#  Copyright Kitware Inc.
-#
-#  Licensed under the Apache License, Version 2.0 ( the "License" );
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-###############################################################################
-
 import cherrypy
 import re
 import ssl
@@ -27,8 +8,9 @@ from girder import config
 from girder.api.describe import Description, autoDescribeRoute
 from girder.api.rest import getApiUrl, setResponseHeader, rawResponse, Resource, RestException
 from girder.api import access
-from girder.constants import SettingKey
+from girder.settings import SettingKey
 from girder.models.setting import Setting
+from girder.models.user import User
 from . import constants, store
 
 _REQUIRED_AX_ATTRS = {
@@ -63,31 +45,32 @@ class OpenId(Resource):
         self.route('GET', ('callback',), self.callback)
 
         self._store = store.GirderStore()
-        ssl._create_default_https_context = ssl._create_unverified_context  # TODO remove awful monkey patch that circumvents SSL cert verification
+        # TODO remove awful monkey patch that circumvents SSL cert verification
+        ssl._create_default_https_context = ssl._create_unverified_context
 
-    @access.public
+    @access.unauthenticated
     @rawResponse
     @autoDescribeRoute(
         Description('Get the XRDS document for this OpenID RP.')
     )
-    def xrds(self, params):
+    def xrds(self):
         apiUrl = getApiUrl()
         setResponseHeader('X-XRDS-Location', apiUrl + '/openid')
         return _xrdsDoc.format(returnTo=apiUrl + '/openid/callback')
 
-    @access.public
+    @access.unauthenticated
     @autoDescribeRoute(
         Description('Get the list of enabled OpenId providers and their URLs.')
     )
-    def listProviders(self, params):
+    def listProviders(self):
        return Setting().get(constants.PluginSettings.PROVIDERS)
 
-    @access.public
+    @access.unauthenticated
     @autoDescribeRoute(
         Description('Login using a specific OpenID provider URL.')
         .param('url', 'The OpenID provider URL to use for authentication.')
     )
-    def login(self, url, params):
+    def login(self, url):
         if url not in set(p['url'] for p in Setting().get(constants.PluginSettings.PROVIDERS)):
             raise RestException('Invalid OpenID provider URL.')
 
@@ -97,7 +80,7 @@ class OpenId(Resource):
         raise cherrypy.HTTPRedirect(
             request.redirectURL(apiUrl + '/openid', apiUrl + '/openid/callback'))
 
-    @access.public
+    @access.unauthenticated
     @autoDescribeRoute(
         Description('Callback called by OpenID providers.'),
         hide=True
@@ -144,7 +127,7 @@ class OpenId(Resource):
             'openid.identifier': openId
         }
 
-        user = self.model('user').findOne(query)
+        user = User().findOne(query)
         setId = not user
         dirty = False
 
@@ -159,7 +142,7 @@ class OpenId(Resource):
                     'administrator to create an account for you.')
             login = self._deriveLogin(email, firstName, lastName)
 
-            user = self.model('user').createUser(
+            user = User().createUser(
                 login=login, password=None, firstName=firstName,
                 lastName=lastName, email=email)
         else:
@@ -181,7 +164,7 @@ class OpenId(Resource):
             }
             dirty = True
         if dirty:
-            user = self.model('user').save(user)
+            user = User().save(user)
 
         return user
 
@@ -227,6 +210,7 @@ class OpenId(Resource):
         When attempting to generate a username, use this to test if the given
         name is valid.
         """
+        # TODO this will fail if login regex is removed
         regex = config.getConfig()['users']['login_regex']
 
         # Still doesn't match regex, we're hosed
@@ -234,5 +218,4 @@ class OpenId(Resource):
             return False
 
         # See if this is already taken.
-        user = self.model('user').findOne({'login': login})
-        return not user
+        return User().findOne({'login': login}) is None

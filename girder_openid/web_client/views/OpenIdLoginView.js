@@ -1,6 +1,6 @@
-import View from 'girder/views/View';
-import { apiRoot, restRequest } from 'girder/rest';
-import { splitRoute } from 'girder/misc';
+import View from '@girder/core/views/View';
+import { getApiRoot, restRequest } from '@girder/core/rest';
+import { splitRoute } from '@girder/core/misc';
 
 import OpenIdLoginViewTemplate from '../templates/openIdLoginView.pug';
 import '../stylesheets/openIdLoginView.styl';
@@ -11,7 +11,7 @@ var OpenIdLoginView = View.extend({
             event.preventDefault();
             var url = $(event.currentTarget).attr('g-url');
             url = window.encodeURIComponent(url);
-            window.location = `${apiRoot}/openid/login?url=${url}&redirect=`;
+            window.location = `${getApiRoot()}/openid/login?url=${url}&redirect=`;
         }
     },
 
@@ -20,7 +20,7 @@ var OpenIdLoginView = View.extend({
         this.providers = null;
 
         restRequest({
-            path: 'openid/provider'
+            url: 'openid/provider'
         }).done(resp => {
             this.providers = resp;
             this.render();
