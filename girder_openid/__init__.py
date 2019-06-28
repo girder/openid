@@ -45,6 +45,7 @@ class _CustomCAFetcher(HTTPFetcher):
 
         with requests.session() as session:
             session.verify = os.environ['GIRDER_REQUESTS_VERIFY']
+            logger.info('OpenID: Session.verify activated: %s' % session.verify)
             response = session.request(method, url, data=body, headers=headers)
 
         return HTTPResponse(response.url, response.status_code, response.headers, response.content)
