@@ -1,7 +1,12 @@
+import os
+
 from girder import events, plugin
 from girder.models.model_base import ValidationException
 from girder.settings import SettingDefault
 from girder.utility import setting_utilities
+from openid.fetchers import HTTPFetcher, HTTPResponse, setDefaultFetcher
+import requests
+
 from . import rest, constants
 
 
@@ -34,6 +39,17 @@ def _checkOpenIdUser(event):
             'password reset link.')
 
 
+class _CustomCAFetcher(HTTPFetcher):
+    def fetch(self, url, body=None, headers=None):
+        method = 'POST' if body else 'GET'
+
+        with requests.session() as session:
+            session.verify = os.environ['GIRDER_REQUESTS_VERIFY']
+            response = session.request(method, url, data=body, headers=headers)
+
+        return HTTPResponse(response.url, response.status_code, response.headers, response.content)
+
+
 class GirderPlugin(plugin.GirderPlugin):
     DISPLAY_NAME = 'OpenID 1.0 Login'
     CLIENT_SOURCE_PATH = 'web_client'
@@ -42,3 +58,10 @@ class GirderPlugin(plugin.GirderPlugin):
         events.bind('no_password_login_attempt', 'openid', _checkOpenIdUser)
         info['apiRoot'].openid = rest.OpenId()
         SettingDefault.defaults[constants.PluginSettings.PROVIDERS] = []
+
+        if 'GIRDER_REQUESTS_VERIFY' in os.environ:
+            # We use a custom fetcher class and set it as the default to support customization
+            # of the "verify" parameter of the requests session
+            setDefaultFetcher(_CustomCAFetcher())
+
+

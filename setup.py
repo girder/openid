@@ -5,7 +5,8 @@ with open('README.rst') as readme_file:
 
 requirements = [
     'girder>=3.0.0a1',
-    'python-openid2'
+    'python-openid2',
+    'requests[security]'
 ]
 
 setup(
