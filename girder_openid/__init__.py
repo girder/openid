@@ -1,6 +1,6 @@
 import os
 
-from girder import events, plugin
+from girder import events, logger, plugin
 from girder.models.model_base import ValidationException
 from girder.settings import SettingDefault
 from girder.utility import setting_utilities
@@ -62,6 +62,7 @@ class GirderPlugin(plugin.GirderPlugin):
         if 'GIRDER_REQUESTS_VERIFY' in os.environ:
             # We use a custom fetcher class and set it as the default to support customization
             # of the "verify" parameter of the requests session
+            logger.info('OpenID: using verify value=%s' % os.environ['GIRDER_REQUESTS_VERIFY'])
             setDefaultFetcher(_CustomCAFetcher())
 
 
