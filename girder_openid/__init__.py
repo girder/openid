@@ -44,9 +44,9 @@ class _CustomCAFetcher(HTTPFetcher):
         method = 'POST' if body else 'GET'
 
         with requests.session() as session:
-            session.verify = os.environ['GIRDER_REQUESTS_VERIFY']
+            session.verify = False
             logger.info('OpenID: Session.verify activated: %s' % session.verify)
-            response = session.request(method, url, data=body, headers=headers)
+            response = session.request(method, url, data=body, headers=headers, verify=False)
 
         return HTTPResponse(response.url, response.status_code, response.headers, response.content)
 
@@ -60,10 +60,10 @@ class GirderPlugin(plugin.GirderPlugin):
         info['apiRoot'].openid = rest.OpenId()
         SettingDefault.defaults[constants.PluginSettings.PROVIDERS] = []
 
-        if 'GIRDER_REQUESTS_VERIFY' in os.environ:
-            # We use a custom fetcher class and set it as the default to support customization
-            # of the "verify" parameter of the requests session
-            logger.info('OpenID: using verify value=%s' % os.environ['GIRDER_REQUESTS_VERIFY'])
-            setDefaultFetcher(_CustomCAFetcher())
+        #if 'GIRDER_REQUESTS_VERIFY' in os.environ:
+        # We use a custom fetcher class and set it as the default to support customization
+        # of the "verify" parameter of the requests session
+        #logger.info('OpenID: using verify value=%s' % os.environ['GIRDER_REQUESTS_VERIFY'])
+        setDefaultFetcher(_CustomCAFetcher(), wrap_exceptions=False)
 
 
