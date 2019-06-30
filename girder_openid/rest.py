@@ -4,7 +4,7 @@ import ssl
 from openid.consumer import consumer
 from openid.extensions import ax
 
-from girder import config
+from girder import config, logger
 from girder.api.describe import Description, autoDescribeRoute
 from girder.api.rest import getApiUrl, setResponseHeader, rawResponse, Resource, RestException
 from girder.api import access
@@ -112,8 +112,8 @@ class OpenId(Resource):
         elif resp.status == consumer.CANCEL:
             raise cherrypy.HTTPRedirect(redirect + '#openid/canceled')
         else:
-            # TODO log details?
-            raise RestException('OpenId Authentication failed (%s).' % resp.status)
+            logger.error('OpenID authentication failure: %s' % resp.message)
+            raise RestException('OpenId authentication failed (%s).' % resp.status)
 
     def _getAxFetchRequest(self):
         req = ax.FetchRequest()
