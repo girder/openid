@@ -4,7 +4,7 @@ import ssl
 from openid.consumer import consumer
 from openid.extensions import ax
 
-from girder import config, logger
+from girder import logger
 from girder.api.describe import Description, autoDescribeRoute
 from girder.api.rest import getApiUrl, setResponseHeader, rawResponse, Resource, RestException
 from girder.api import access
@@ -33,6 +33,9 @@ _xrdsDoc = """
 </xrds:XRDS>
 """
 
+# This lets us work against both locked-down Girder and normal Girder core
+_public = getattr(access, 'unauthenticated', access.public)
+
 
 class OpenId(Resource):
     def __init__(self):
@@ -48,7 +51,7 @@ class OpenId(Resource):
         # TODO remove awful monkey patch that circumvents SSL cert verification
         ssl._create_default_https_context = ssl._create_unverified_context
 
-    @access.unauthenticated
+    @_public
     @rawResponse
     @autoDescribeRoute(
         Description('Get the XRDS document for this OpenID RP.')
@@ -58,14 +61,14 @@ class OpenId(Resource):
         setResponseHeader('X-XRDS-Location', apiUrl + '/openid')
         return _xrdsDoc.format(returnTo=apiUrl + '/openid/callback')
 
-    @access.unauthenticated
+    @_public
     @autoDescribeRoute(
         Description('Get the list of enabled OpenId providers and their URLs.')
     )
     def listProviders(self):
        return Setting().get(constants.PluginSettings.PROVIDERS)
 
-    @access.unauthenticated
+    @_public
     @autoDescribeRoute(
         Description('Login using a specific OpenID provider URL.')
         .param('url', 'The OpenID provider URL to use for authentication.')
@@ -80,7 +83,7 @@ class OpenId(Resource):
         raise cherrypy.HTTPRedirect(
             request.redirectURL(apiUrl + '/openid', apiUrl + '/openid/callback'))
 
-    @access.unauthenticated
+    @_public
     @autoDescribeRoute(
         Description('Callback called by OpenID providers.'),
         hide=True
@@ -210,11 +213,8 @@ class OpenId(Resource):
         When attempting to generate a username, use this to test if the given
         name is valid.
         """
-        # TODO this will fail if login regex is removed
-        regex = config.getConfig()['users']['login_regex']
-
         # Still doesn't match regex, we're hosed
-        if not re.match(regex, login):
+        if not re.match(r'^[a-z][\da-z\-\.]{3,}$', login):
             return False
 
         # See if this is already taken.
