@@ -40,6 +40,10 @@ def _checkOpenIdUser(event):
 
 
 class _CustomCAFetcher(HTTPFetcher):
+    def __init__(self, verify, *args, **kwargs):
+        super(_CustomCAFetcher, self).__init__(*args, **kwargs)
+        self._verify = verify
+
     def fetch(self, url, body=None, headers=None):
         headers = headers or {}
         if body:
@@ -48,9 +52,8 @@ class _CustomCAFetcher(HTTPFetcher):
         else:
             method = 'GET'
 
-        with requests.session() as session:
-            session.verify = os.environ['GIRDER_REQUESTS_VERIFY']
-            response = session.request(method, url, data=body, headers=headers)
+        with requests.session() as s:
+            response = s.request(method, url, data=body, headers=headers, verify=self._verify)
 
         return HTTPResponse(response.url, response.status_code, response.headers, response.content)
 
@@ -65,9 +68,10 @@ class GirderPlugin(plugin.GirderPlugin):
         SettingDefault.defaults[constants.PluginSettings.PROVIDERS] = []
 
         if 'GIRDER_REQUESTS_VERIFY' in os.environ:
+            path = os.environ['GIRDER_REQUESTS_VERIFY']
+            if not os.path.isfile(path):
+                raise Exception('Requests cert not found: %s' % path)
             # We use a custom fetcher class and set it as the default to support customization
             # of the "verify" parameter of the requests session
-            logger.info('OpenID: using verify value=%s' % os.environ['GIRDER_REQUESTS_VERIFY'])
-            setDefaultFetcher(_CustomCAFetcher(), wrap_exceptions=False)
-
-
+            logger.info('OpenID: using verify value=%s' % path)
+            setDefaultFetcher(_CustomCAFetcher(path), wrap_exceptions=False)
