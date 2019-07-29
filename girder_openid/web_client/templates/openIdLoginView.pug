@@ -3,4 +3,4 @@
     .g-openid-section-header-text Or #{modeText} with OpenID
 
   each provider in providers
-    button.g-openid-button.btn.btn-default(g-url=provider.url)= provider.name
+    button.g-openid-button.btn.btn-default(g-url=provider.url, type="button")= provider.name
